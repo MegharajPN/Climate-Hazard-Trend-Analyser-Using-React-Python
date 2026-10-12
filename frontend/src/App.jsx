@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApiError, analysisQueryString, fetchAnalysis } from "./api.js";
+import { ApiError, analysisQueryString, apiUrl, fetchAnalysis } from "./api.js";
 import RegionPicker from "./components/RegionPicker.jsx";
 import { EventCountChart, IntensityChart } from "./components/HazardCharts.jsx";
 
@@ -185,7 +185,7 @@ export default function App() {
       {result && (
         <section className="results">
           <div className="result-actions no-print">
-            <a className="button-link" href={`/api/analysis/export/?${analysisQueryString(buildParams(form))}`}>
+            <a className="button-link" href={apiUrl(`/api/analysis/export/?${analysisQueryString(buildParams(form))}`)}>
               Download CSV
             </a>
             <button type="button" className="button-link" onClick={() => window.print()}>

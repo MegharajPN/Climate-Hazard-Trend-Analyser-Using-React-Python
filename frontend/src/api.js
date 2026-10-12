@@ -1,5 +1,10 @@
-// All backend calls go through here. Paths are relative so the Vite proxy (dev) or
-// the same-origin deployment (prod) handles routing.
+// All backend calls go through here. In development the Vite proxy forwards /api, so the base
+// is empty. In production set VITE_API_BASE to the backend origin, e.g. https://api.example.com.
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+
+export function apiUrl(path) {
+  return `${API_BASE}${path}`;
+}
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -12,7 +17,7 @@ async function getJson(url, params) {
   const query = analysisQueryString(params || {});
   let response;
   try {
-    response = await fetch(`${url}?${query}`);
+    response = await fetch(`${apiUrl(url)}?${query}`);
   } catch {
     throw new ApiError("Could not reach the backend. Is the Django server running?", 0);
   }

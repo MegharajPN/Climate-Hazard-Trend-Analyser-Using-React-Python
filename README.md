@@ -208,3 +208,38 @@ Three hazards share one event detector (`hazards/detection.py`): a run of consec
   code, ran the backend test suite and a live API call against Open-Meteo, and built the frontend.
 - The heatwave definition, data-cleaning rules, and assumptions above were chosen by the author
   and should be checked against the code during review.
+
+---
+
+## 11. Deployment (free tier)
+
+Stack: **Render** (free web service for the API, free static site for the frontend) and **TiDB Cloud
+Serverless** (free MySQL-compatible database). Both are configured by `render.yaml` at the repo root.
+
+### Step 1: Database (TiDB Cloud)
+1. Create a free Serverless cluster at tidbcloud.com.
+2. Open *Connect*, and note the **host**, **port** (4000), **user**, and **password**.
+3. Create a database named `climate_hazards` (or use the default).
+
+### Step 2: API on Render
+1. In Render: **New > Blueprint**, select this GitHub repository.
+2. When prompted for the `sync: false` values, enter the TiDB details:
+   `DB_HOST`, `DB_PORT=4000`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
+   Leave `CORS_ALLOWED_ORIGINS` and `VITE_API_BASE` blank for now (set them in steps 3 and 4).
+3. Wait for the deploy. Check `https://<api>.onrender.com/api/health/` returns `{"status":"ok"}`.
+
+### Step 3: Frontend on Render
+1. Open the `climate-hazard-web` service and set **VITE_API_BASE** to the API URL from step 2
+   (for example `https://climate-hazard-api.onrender.com`). Trigger a redeploy so the build uses it.
+2. Note the frontend URL (for example `https://climate-hazard-web.onrender.com`).
+
+### Step 4: Connect them
+In the API service, set **CORS_ALLOWED_ORIGINS** to the frontend URL and let it redeploy.
+
+### Notes for the free tier
+- The free web service sleeps after about 15 minutes idle. The first request after that can take
+  30–60 seconds. Open `/api/health/` once before a demo to wake it.
+- The first analysis for a region fetches data from Open-Meteo and can take 30 seconds or more.
+  Later requests for that region are served from MySQL.
+- Secrets (`DJANGO_SECRET_KEY`, DB password) are set in the Render dashboard, not in the repo.
+  `DJANGO_DEBUG` is `0` in production.

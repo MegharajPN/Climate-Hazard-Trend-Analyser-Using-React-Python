@@ -19,6 +19,12 @@ def _env_list(name, default=""):
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-insecure-key-change-me")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+# Render sets this automatically for web services, so the public hostname is always allowed.
+if os.getenv("RENDER_EXTERNAL_HOSTNAME"):
+    ALLOWED_HOSTS.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
+
+if not DEBUG and SECRET_KEY.startswith("dev-only"):
+    raise RuntimeError("Set DJANGO_SECRET_KEY when DJANGO_DEBUG is off.")
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
@@ -37,6 +43,19 @@ ROOT_URLCONF = "climate_api.urls"
 TEMPLATES = []
 WSGI_APPLICATION = "climate_api.wsgi.application"
 
+def _mysql_ssl_options():
+    """Hosted MySQL (TiDB Cloud, Aiven) needs TLS.
+
+    DB_SSL=1 turns TLS on using the system CA store. DB_SSL_CA=<path> also pins a CA file.
+    """
+    ca_path = os.getenv("DB_SSL_CA", "")
+    if ca_path:
+        return {"ssl": {"ca": ca_path}}
+    if os.getenv("DB_SSL", "0") == "1":
+        return {"ssl": {}}
+    return {}
+
+
 # MySQL connection, driven by the DB_* variables from the .env file.
 DB_ENGINE = os.getenv("DB_CONNECTION", "mysql")
 if DB_ENGINE != "mysql":
@@ -54,7 +73,7 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "127.0.0.1"),
         "PORT": os.getenv("DB_PORT", "3306"),
-        "OPTIONS": {"charset": "utf8mb4"},
+        "OPTIONS": {"charset": "utf8mb4", **_mysql_ssl_options()},
     }
 }
 
