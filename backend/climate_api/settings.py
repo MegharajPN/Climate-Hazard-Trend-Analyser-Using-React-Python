@@ -4,6 +4,7 @@ Database connection values are read from environment variables (or a .env file
 next to manage.py) so credentials never live in source control.
 """
 import os
+import ssl
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -52,7 +53,9 @@ def _mysql_ssl_options():
     if ca_path:
         return {"ssl": {"ca": ca_path}}
     if os.getenv("DB_SSL", "0") == "1":
-        return {"ssl": {}}
+        # An empty dict is falsy, so PyMySQL would silently skip TLS. Pass a real SSLContext
+        # that verifies the server certificate against the system CA store.
+        return {"ssl": ssl.create_default_context()}
     return {}
 
 
